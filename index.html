@@ -97,14 +97,7 @@
 
             // クリックした瞬間に音を鳴らす
             if (cell.textContent === "○") {
-              let pitch = pitches[pIndex];
-              let osc = audioCtx.createOscillator();
-              let gain = audioCtx.createGain();
-              osc.frequency.value = noteFreq[pitch];
-              gain.gain.value = document.getElementById("volume").value / 100;
-              osc.connect(gain).connect(audioCtx.destination);
-              osc.start();
-              osc.stop(audioCtx.currentTime + 0.3); // 0.3秒だけ鳴らす
+              playNote(pitches[pIndex], 0.3);
             }
           });
         }
@@ -119,6 +112,16 @@
           grid.rows[r].cells[c].textContent = "";
         }
       }
+    }
+
+    function playNote(pitch, duration) {
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.frequency.value = noteFreq[pitch];
+      gain.gain.value = document.getElementById("volume").value / 100;
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
     }
 
     // 俳句をマス目に配置（5-7-5 の休符を自動挿入）
@@ -162,14 +165,7 @@
         for (let r = 1; r < grid.rows.length; r++) {
           const cell = grid.rows[r].cells[c];
           if (cell.textContent === "○") {
-            let osc = audioCtx.createOscillator();
-            let gain = audioCtx.createGain();
-            osc.frequency.value = noteFreq[pitches[r - 1]];
-            gain.gain.value = volume;
-            osc.connect(gain).connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + beatDuration);
-            currentOscillators.push(osc);
+            playNote(pitches[r - 1], beatDuration);
           }
         }
         await new Promise(resolve => setTimeout(resolve, beatDuration * 1000));
@@ -183,22 +179,65 @@
       currentOscillators = [];
     }
 
-    // JSON保存
+    // JSON保存（grid + haiku + tempo + volume）
     function saveJSON() {
-      let data = [];
+      let data = {
+        grid: [],
+        haiku: document.getElementById("haiku").value,
+        tempo: document.getElementById("tempo").value,
+        volume: document.getElementById("volume").value / 100
+      };
       for (let r = 1; r < grid.rows.length; r++) {
         let rowData = [];
         for (let c = 1; c < grid.rows[r].cells.length; c++) {
           rowData.push(grid.rows[r].cells[c].textContent === "○" ? 1 : 0);
         }
-        data.push(rowData);
+        data.grid.push(rowData);
       }
-      const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "melody.json";
+      a.download = "haiku_melody.json";
       a.click();
     }
+
+    // JSON読み込み
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const data = JSON.parse(event.target.result);
+
+        // grid復元
+        if (data.grid) {
+          createGrid(data.grid[0].length);
+          for (let r = 0; r < data.grid.length; r++) {
+            for (let c = 0; c < data.grid[r].length; c++) {
+              grid.rows[r+1].cells[c+1].textContent = data.grid[r][c] ? "○" : "";
+            }
+          }
+        }
+
+        // haiku復元
+        if (data.haiku) {
+          document.getElementById("haiku").value = data.haiku;
+        }
+
+        // tempo復元
+        if (data.tempo) {
+          document.getElementById("tempo").value = data.tempo;
+          document.getElementById("tempoValue").textContent = data.tempo;
+        }
+
+        // volume復元
+        if (data.volume !== undefined) {
+          document.getElementById("volume").value = data.volume * 100;
+          document.getElementById("volumeValue").textContent = data.volume * 100;
+        }
+      };
+      reader.readAsText(file);
+    });
   </script>
 </body>
 </html>
