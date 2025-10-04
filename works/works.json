@@ -1,0 +1,17 @@
+[
+  {
+    "title": "わたあめ",
+    "author": "新井さん",
+    "file": "works/arai.json"
+  },
+  {
+    "title": "ふるいけや",
+    "author": "石原さん",
+    "file": "works/ishihara.json"
+  },
+  {
+    "title": "増税",
+    "author": "片岡さん",
+    "file": "works/kataoka.json"
+  }
+]
