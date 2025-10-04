@@ -247,18 +247,37 @@ window.addEventListener('load', () => {
   const params = new URLSearchParams(window.location.search);
   if (params.has('data')) {
     const url = params.get('data');
-    // 相対URLから fetch
-    fetch(url).then(r => {
-      if (!r.ok) throw new Error("fetch失敗: " + r.status);
-      return r.json();
-    }).then(json => {
-      loadFromJSON(json);
-    }).catch(err => {
-      console.error("JSON読み込みエラー:", err);
-    });
+    fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error("fetch失敗: " + r.status);
+        return r.json();
+      })
+      .then(json => {
+        // tempoが文字列でも数値に変換
+        if (json.tempo) {
+          document.getElementById('tempo').value = parseInt(json.tempo);
+          document.getElementById('tempoLabel').textContent = json.tempo;
+        }
+        // volumeがある場合に反映
+        if (json.volume) {
+          document.getElementById('volume').value = json.volume * 100;
+          document.getElementById('volumeLabel').textContent = json.volume * 100;
+        }
+        // haikuを表示
+        if (json.haiku) {
+          document.getElementById('haiku').value = json.haiku;
+          showHaikuText(json.haiku);
+        }
+        // gridを読み込み
+        loadFromJSON(json);
+      })
+      .catch(err => {
+        console.error("JSON読み込みエラー:", err);
+      });
   }
 });
 </script>
 </body>
 </html>
+
 
