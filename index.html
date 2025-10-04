@@ -151,18 +151,13 @@
       const params = new URLSearchParams(window.location.search);
       if (params.has("data")) {
         const data = params.get("data");
-        if (data === "works/arai.json") {
-          const json = {
-            "grid": [
-              [1,0,0,0,0,0,0,0,0,0,0],
-              [0,1,0,0,0,0,0,0,0,0,0],
-              [0,0,1,0,0,0,0,0,0,0,0],
-              [0,0,0,0,0,0,0,0,0,0,0],
-              [0,0,0,0,0,0,0,0,0,0,0],
-              [0,0,0,0,0,0,0,0,0,0,0]
-            ]
-          };
-          loadFromJSON(json);
+        if (data) {
+  fetch(data)
+    .then(response => response.json())
+    .then(json => loadFromJSON(json))
+    .catch(err => console.error("JSONファイルの読み込みに失敗しました:", err));
+}
+
         }
       }
     };
@@ -185,4 +180,5 @@
   </script>
 </body>
 </html>
+
 
