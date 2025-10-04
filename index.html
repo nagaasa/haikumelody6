@@ -32,14 +32,6 @@
       vertical-align: middle;
       cursor: pointer;
     }
-    .note-circle {
-      width: 12px;
-      height: 12px;
-      border: 2px solid #555;
-      border-radius: 50%;
-      display: inline-block;
-      background-color: white;
-    }
     .slider-container {
       margin: 10px 0;
     }
@@ -52,7 +44,6 @@
 <body>
   <h1>俳句メロディーメーカー</h1>
 
-  <!-- 俳句入力欄 -->
   <textarea id="haiku" placeholder="ひらがなで俳句を入力してください（例：ふるいけや　かわずとびこむ　みずのおと）"></textarea><br>
   <button onclick="placeHaiku()">俳句をマス目に配置</button>
   <button onclick="playMelody()">再生</button>
@@ -70,7 +61,6 @@
       oninput="document.getElementById('volumeLabel').textContent=this.value">
   </div>
 
-  <!-- 読み込まれた俳句の表示 -->
   <div id="haikuDisplay"></div>
 
   <table id="grid"></table>
@@ -92,16 +82,14 @@
     };
 
     function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     function createGrid(columns = 10) {
       grid.innerHTML = "";
       let header = grid.insertRow();
       header.insertCell();
-      for (let i = 0; i < columns; i++) header.insertCell().textContent = "";
+      for (let i = 0; i < columns; i++) header.insertCell();
       for (let p of pitches) {
         let row = grid.insertRow();
         let th = row.insertCell();
@@ -118,15 +106,7 @@
       const row = cell.parentNode.rowIndex - 1;
       const col = cell.cellIndex - 1;
       gridData[row][col] = gridData[row][col] ? 0 : 1;
-      updateCell(cell, gridData[row][col]);
-    }
-
-    function updateCell(cell, isOn, circleMode = false) {
-      if (circleMode) {
-        cell.innerHTML = isOn ? '<span class="note-circle"></span>' : "";
-      } else {
-        cell.style.background = isOn ? "#4caf50" : "";
-      }
+      cell.style.background = gridData[row][col] ? "#4caf50" : "";
     }
 
     function placeHaiku() {
@@ -137,7 +117,7 @@
       for (let i = 0; i < text.length && i < gridData[0].length; i++) {
         const row = i % pitches.length;
         gridData[row][i] = 1;
-        updateCell(grid.rows[row + 1].cells[i + 1], true);
+        grid.rows[row + 1].cells[i + 1].style.background = "#4caf50";
       }
     }
 
@@ -164,15 +144,13 @@
     }
 
     function stopMelody() {
-      if (audioCtx) {
-        audioCtx.close();
-        audioCtx = null;
-      }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
     }
 
     function saveJSON() {
+      const tempo = parseInt(document.getElementById("tempo").value);
       const blob = new Blob(
-        [JSON.stringify({ haiku: currentHaiku, grid: gridData })],
+        [JSON.stringify({ haiku: currentHaiku, tempo: tempo, grid: gridData })],
         { type: "application/json" }
       );
       const a = document.createElement("a");
@@ -214,26 +192,30 @@
       if (data.grid) {
         createGrid(data.grid[0].length);
         gridData = data.grid;
-        currentHaiku = data.haiku || "";
-        document.getElementById("haikuDisplay").textContent =
-          currentHaiku ? "📝 " + currentHaiku : "";
-
-        const circleMode = data.circleStyle === true || checkOldStyle(data);
         for (let r = 0; r < gridData.length; r++) {
           for (let c = 0; c < gridData[r].length; c++) {
             if (gridData[r][c] === 1) {
-              updateCell(grid.rows[r + 1].cells[c + 1], true, circleMode);
+              grid.rows[r + 1].cells[c + 1].style.background = "#4caf50";
             }
           }
         }
       }
-    }
-
-    function checkOldStyle(data) {
-      return data.grid.some(row => row.some(v => v === 1));
+      if (data.tempo) {
+        document.getElementById("tempo").value = data.tempo;
+        document.getElementById("tempoLabel").textContent = data.tempo;
+      }
+      if (data.haiku) {
+        document.getElementById("haiku").value = data.haiku;
+        document.getElementById("haikuDisplay").textContent = "📝 " + data.haiku;
+      }
     }
   </script>
 </body>
 </html>
 
+      
+ 
 
+  
+ 
+   
