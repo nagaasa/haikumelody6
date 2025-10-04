@@ -16,29 +16,43 @@
 <body>
 <header>🎵 俳句メロディー作品ギャラリー 🎵</header>
 
-<div class="container">
-  <!-- 作品の数だけカードを追加してください -->
-  <div class="card">
-    <div class="title">わたあめ</div>
-    <div class="author">作者：新井さん</div>
-    <!-- data パラメータで index.html に渡す -->
-    <a class="btn" href="index.html?data=works/arai.json">作品を再生</a>
-  </div>
+<div class="container" id="gallery"></div>
 
-  <div class="card">
-    <div class="title">ふるいけや</div>
-    <div class="author">作者：石原さん</div>
-    <a class="btn" href="index.html?data=works/furuikeya.json">作品を再生</a>
-  </div>
+<script>
+// === ここで作品データを定義します ===
+// 日本語ファイル名もOKです！
+const works = [
+  { title: "わたあめ", author: "新井さん", file: "works/アライ・わたあめ.json" },
+  { title: "ふるいけや", author: "石原さん", file: "works/furuikeya.json" },
+  { title: "増税", author: "片岡さん", file: "works/kataoka.json" }
+];
 
-  <div class="card">
-    <div class="title">増税</div>
-    <div class="author">作者：片岡さん</div>
-    <a class="btn" href="index.html?data=works/kataoka.json">作品を再生</a>
-  </div>
+// === カードを動的に生成 ===
+const gallery = document.getElementById("gallery");
+works.forEach(work => {
+  const card = document.createElement("div");
+  card.className = "card";
 
-  <!-- 新しい作品を追加するには上記と同様の <div class="card"> を追加してください -->
-</div>
+  const title = document.createElement("div");
+  title.className = "title";
+  title.textContent = work.title;
+
+  const author = document.createElement("div");
+  author.className = "author";
+  author.textContent = "作者：" + work.author;
+
+  const btn = document.createElement("a");
+  btn.className = "btn";
+  // encodeURIComponentで日本語ファイル名にも対応！
+  btn.href = "index.html?data=" + encodeURIComponent(work.file);
+  btn.textContent = "作品を再生";
+
+  card.appendChild(title);
+  card.appendChild(author);
+  card.appendChild(btn);
+  gallery.appendChild(card);
+});
+</script>
 </body>
 </html>
 
