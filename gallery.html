@@ -1,122 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>俳句メロディー作品ギャラリー</title>
-  <style>
-    body {
-      font-family: "Yu Gothic", sans-serif;
-      background-color: #f0f0f0;
-      margin: 0;
-      text-align: center;
-    }
-    header {
-      background-color: #4caf50;
-      color: white;
-      padding: 20px 0;
-      font-size: 28px;
-      font-weight: bold;
-    }
-    .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 30px;
-      gap: 20px;
-    }
-    .card {
-      background-color: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      width: 260px;
-      padding: 20px;
-      text-align: center;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: scale(1.03);
-    }
-    h3 {
-      margin: 0;
-      font-size: 22px;
-      color: #333;
-    }
-    p {
-      margin: 8px 0 15px;
-      color: #555;
-    }
-    button {
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      font-size: 15px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    footer {
-      margin-top: 40px;
-      color: #777;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="utf-8" />
+<title>俳句メロディー作品ギャラリー</title>
+<style>
+  body { font-family:"Yu Gothic",sans-serif; background:#f8f8f8; }
+  header { background:#3aa14a; color:white; padding:18px 0; text-align:center; font-size:28px; }
+  .container { width:90%; margin:20px auto; display:flex; gap:20px; justify-content:flex-start; flex-wrap:wrap; }
+  .card { background:white; width:260px; padding:18px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.08); text-align:center; }
+  .title { font-size:20px; margin-bottom:6px; }
+  .author { color:#666; margin-bottom:12px; }
+  .btn { background:#4caf50; color:white; padding:8px 12px; border-radius:6px; text-decoration:none; display:inline-block; }
+</style>
 </head>
 <body>
-  <header>🎵 俳句メロディー作品ギャラリー 🎵</header>
+<header>🎵 俳句メロディー作品ギャラリー 🎵</header>
 
-  <div class="gallery" id="galleryContainer"></div>
+<div class="container">
+  <!-- 作品の数だけカードを追加してください -->
+  <div class="card">
+    <div class="title">わたあめ</div>
+    <div class="author">作者：新井さん</div>
+    <!-- data パラメータで index.html に渡す -->
+    <a class="btn" href="index.html?data=works/arai.json">作品を再生</a>
+  </div>
 
-  <footer>© 2025 俳句メロディーメーカー</footer>
+  <div class="card">
+    <div class="title">ふるいけや</div>
+    <div class="author">作者：石原さん</div>
+    <a class="btn" href="index.html?data=works/furuikeya.json">作品を再生</a>
+  </div>
 
-  <script>
-    // === 🏫 ギャラリー作品データをここに登録 ===
-    const works = [
-      {
-        title: "わたあめ",
-        author: "新井さん",
-        path: "works/arai.json"
-      },
-      {
-        title: "ふるいけや",
-        author: "石原さん",
-        path: "works/ishihara.json"
-      },
-      {
-        title: "増税",
-        author: "片岡さん",
-        path: "works/kataoka.json"
-      }
-    ];
+  <div class="card">
+    <div class="title">増税</div>
+    <div class="author">作者：片岡さん</div>
+    <a class="btn" href="index.html?data=works/kataoka.json">作品を再生</a>
+  </div>
 
-    // === 📦 作品カードを自動生成 ===
-    const container = document.getElementById("galleryContainer");
-
-    works.forEach(work => {
-      const card = document.createElement("div");
-      card.className = "card";
-
-      const title = document.createElement("h3");
-      title.textContent = work.title;
-
-      const author = document.createElement("p");
-      author.textContent = `作者：${work.author}`;
-
-      const button = document.createElement("button");
-      button.textContent = "作品を再生";
-      button.onclick = () => {
-        // ✅ index.htmlに作品パスを渡して開く
-        window.location.href = `index.html?data=${work.path}`;
-      };
-
-      card.appendChild(title);
-      card.appendChild(author);
-      card.appendChild(button);
-      container.appendChild(card);
-    });
-  </script>
+  <!-- 新しい作品を追加するには上記と同様の <div class="card"> を追加してください -->
+</div>
 </body>
 </html>
+
