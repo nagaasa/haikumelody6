@@ -13,12 +13,6 @@
       width: 80%;
       height: 50px;
       margin: 10px 0;
-      font-size: 16px;
-    }
-    #haikuDisplay {
-      font-size: 20px;
-      margin: 15px 0;
-      color: #333;
     }
     table {
       margin: 0 auto;
@@ -28,8 +22,6 @@
       width: 30px;
       height: 30px;
       border: 1px solid #ccc;
-      text-align: center;
-      vertical-align: middle;
       cursor: pointer;
     }
     .slider-container {
@@ -45,6 +37,7 @@
   <h1>俳句メロディーメーカー</h1>
 
   <textarea id="haiku" placeholder="ひらがなで俳句を入力してください（例：ふるいけや　かわずとびこむ　みずのおと）"></textarea><br>
+
   <button onclick="placeHaiku()">俳句をマス目に配置</button>
   <button onclick="playMelody()">再生</button>
   <button onclick="stopMelody()">停止</button>
@@ -55,41 +48,37 @@
   <div class="slider-container">
     テンポ <span id="tempoLabel">120</span> BPM
     <input type="range" id="tempo" min="60" max="240" value="120"
-      oninput="document.getElementById('tempoLabel').textContent=this.value"><br>
+      oninput="document.getElementById('tempoLabel').textContent=this.value">
+    <br>
     音量 <span id="volumeLabel">100</span> %
     <input type="range" id="volume" min="10" max="100" value="100"
       oninput="document.getElementById('volumeLabel').textContent=this.value">
   </div>
 
-  <div id="haikuDisplay"></div>
+  <div id="loadedHaiku" style="margin: 15px; font-size: 18px;"></div>
 
   <table id="grid"></table>
 
   <script>
     const pitches = ["高レ", "ド", "ラ", "ソ", "ファ", "低レ"];
     const grid = document.getElementById("grid");
-    let gridData = [];
-    let audioCtx = null;
-    let currentHaiku = "";
-
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const noteFreq = {
       "高レ": 587.33,
       "ド": 523.25,
       "ラ": 440.00,
       "ソ": 392.00,
       "ファ": 349.23,
-      "低レ": 293.66
+      "低レ": 293.66,
     };
 
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    let gridData = [];
 
     function createGrid(columns = 10) {
       grid.innerHTML = "";
       let header = grid.insertRow();
       header.insertCell();
-      for (let i = 0; i < columns; i++) header.insertCell();
+      for (let i = 0; i < columns; i++) header.insertCell().textContent = "";
       for (let p of pitches) {
         let row = grid.insertRow();
         let th = row.insertCell();
@@ -105,14 +94,14 @@
     function toggleCell(cell) {
       const row = cell.parentNode.rowIndex - 1;
       const col = cell.cellIndex - 1;
-      gridData[row][col] = gridData[row][col] ? 0 : 1;
-      cell.style.background = gridData[row][col] ? "#4caf50" : "";
+      if (row >= 0 && col >= 0) {
+        gridData[row][col] = gridData[row][col] ? 0 : 1;
+        cell.style.background = gridData[row][col] ? "#4caf50" : "";
+      }
     }
 
     function placeHaiku() {
       const text = document.getElementById("haiku").value.replace(/\s/g, "");
-      currentHaiku = text;
-      document.getElementById("haikuDisplay").textContent = "📝 " + text;
       createGrid(text.length);
       for (let i = 0; i < text.length && i < gridData[0].length; i++) {
         const row = i % pitches.length;
@@ -122,20 +111,17 @@
     }
 
     function playMelody() {
-      initAudio();
       const tempo = parseInt(document.getElementById("tempo").value);
       const volume = parseInt(document.getElementById("volume").value) / 100;
       let t = audioCtx.currentTime;
-
       for (let c = 0; c < gridData[0].length; c++) {
         for (let r = 0; r < gridData.length; r++) {
           if (gridData[r][c] === 1) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
             osc.frequency.value = noteFreq[pitches[r]];
             gain.gain.value = volume;
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            osc.connect(gain).connect(audioCtx.destination);
             osc.start(t + (c * 60 / tempo));
             osc.stop(t + (c * 60 / tempo) + 0.3);
           }
@@ -144,49 +130,28 @@
     }
 
     function stopMelody() {
-      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+      audioCtx.close();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
     function saveJSON() {
-      const tempo = parseInt(document.getElementById("tempo").value);
+      const haikuText = document.getElementById("haiku").value;
+      const tempoValue = document.getElementById("tempo").value;
       const blob = new Blob(
-        [JSON.stringify({ haiku: currentHaiku, tempo: tempo, grid: gridData })],
+        [JSON.stringify({ haiku: haikuText, tempo: tempoValue, grid: gridData }, null, 2)],
         { type: "application/json" }
       );
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = (currentHaiku || "haiku") + ".json";
+      a.download = "haiku_work.json";
       a.click();
     }
 
     function resetGrid() {
-      createGrid(gridData[0]?.length || 10);
-      document.getElementById("haikuDisplay").textContent = "";
-      currentHaiku = "";
+      createGrid(gridData[0].length || 10);
+      document.getElementById("haiku").value = "";
+      document.getElementById("loadedHaiku").textContent = "";
     }
-
-    document.getElementById("fileInput").addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const data = JSON.parse(ev.target.result);
-        loadFromJSON(data);
-      };
-      reader.readAsText(file);
-    });
-
-    window.onload = () => {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("data")) {
-        fetch(params.get("data"))
-          .then(res => res.json())
-          .then(json => loadFromJSON(json))
-          .catch(() => createGrid(10));
-      } else {
-        createGrid(10);
-      }
-    };
 
     function loadFromJSON(data) {
       if (data.grid) {
@@ -200,22 +165,33 @@
           }
         }
       }
+      if (data.haiku) {
+        document.getElementById("haiku").value = data.haiku;
+        document.getElementById("loadedHaiku").textContent = data.haiku;
+      }
       if (data.tempo) {
         document.getElementById("tempo").value = data.tempo;
         document.getElementById("tempoLabel").textContent = data.tempo;
       }
-      if (data.haiku) {
-        document.getElementById("haiku").value = data.haiku;
-        document.getElementById("haikuDisplay").textContent = "📝 " + data.haiku;
-      }
     }
+
+    // ✅ GitHub Pages用 - URLパラメータから作品を読み込む
+    window.onload = async function () {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("data")) {
+        const dataPath = params.get("data");
+        try {
+          const response = await fetch(dataPath);
+          const json = await response.json();
+          loadFromJSON(json);
+        } catch (e) {
+          console.error("作品データの読み込みに失敗:", e);
+        }
+      } else {
+        createGrid(10);
+      }
+    };
   </script>
 </body>
 </html>
 
-      
- 
-
-  
- 
-   
