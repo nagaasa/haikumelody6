@@ -5,34 +5,29 @@
   <title>俳句メロディーメーカー</title>
   <style>
     body {
-      font-family: "Yu Gothic", sans-serif;
+      font-family: Arial, sans-serif;
+      text-align: center;
       margin: 20px;
+      background: #f0f0f0;
     }
     h1 {
-      font-size: 1.5em;
-      margin-bottom: 10px;
+      color: #333;
     }
     textarea {
-      width: 100%;
-      height: 50px;
-      margin-bottom: 10px;
+      width: 80%;
+      height: 60px;
+      margin: 10px 0;
     }
     table {
       border-collapse: collapse;
-      margin-top: 10px;
+      margin: 20px auto;
+      background: white;
     }
-    td, th {
-      border: 1px solid #ccc;
+    td {
       width: 30px;
       height: 30px;
-      text-align: center;
-    }
-    th {
-      background: #f0f0f0;
-    }
-    button {
-      margin: 5px;
-      padding: 5px 10px;
+      border: 1px solid #ccc;
+      cursor: pointer;
     }
     .slider-container {
       margin: 10px 0;
@@ -41,7 +36,7 @@
 </head>
 <body>
   <h1>俳句メロディーメーカー</h1>
-  <textarea id="haiku" placeholder="ひらがなで俳句を入力してください（例：ふるいけや かわずとびこむ みずのおと）"></textarea>
+  <textarea id="haiku" placeholder="ひらがなで俳句を入力してください（例：ふるいけや　かわずとびこむ　みずのおと）"></textarea>
   <br>
   <button onclick="placeHaiku()">俳句をマス目に配置</button>
   <button onclick="playMelody()">再生</button>
@@ -51,52 +46,26 @@
   <button onclick="resetGrid()">リセット</button>
 
   <div class="slider-container">
-    テンポ <span id="tempoValue">120</span> BPM
+    <label>テンポ <span id="tempoValue">120</span> BPM</label>
     <input type="range" id="tempo" min="60" max="240" value="120" 
       oninput="document.getElementById('tempoValue').textContent=this.value">
   </div>
   <div class="slider-container">
-    音量 <span id="volumeValue">100</span> %
-    <input type="range" id="volume" min="0" max="100" value="100" 
+    <label>音量 <span id="volumeValue">100</span>%</label>
+    <input type="range" id="volume" min="0" max="100" value="100"
       oninput="document.getElementById('volumeValue').textContent=this.value">
   </div>
 
   <table id="grid"></table>
 
   <script>
-    // URLパラメータからJSONファイルを読み込む処理
-window.onload = function () {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has("data")) {
-    const url = params.get("data"); // 例: works/arai.json
-    fetch(url)
-      .then(response => response.json())
-      .then(json => {
-        loadFromJSON(json);
-      })
-      .catch(err => console.error("JSON読み込み失敗:", err));
-  }
-};
-
-// JSONからグリッドを復元
-function loadFromJSON(data) {
-  if (data.grid) {
-    gridData = data.grid; // 既存のグローバル変数に代入
-    createGrid(gridData[0].length); // 列数に合わせてグリッドを再生成
-    for (let r = 0; r < gridData.length; r++) {
-      for (let c = 0; c < gridData[r].length; c++) {
-        if (gridData[r][c] === 1) {
-          grid.rows[r + 1].cells[c + 1].style.background = "#4caf50";
-        }
-      }
-    }
-  }
-}
-
     const pitches = ["高レ", "ド", "ラ", "ソ", "ファ", "低レ"];
     const grid = document.getElementById("grid");
-
     let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isPlaying = false;
+    let currentTimeouts = [];
+    let gridData = [];
+
     const noteFreq = {
       "高レ": 587.33,
       "ド": 523.25,
@@ -106,167 +75,137 @@ function loadFromJSON(data) {
       "低レ": 293.66
     };
 
-    // 初期テーブル作成
+    // グリッドを作成
     function createGrid(columns = 15) {
       grid.innerHTML = "";
       let header = grid.insertRow();
-      header.insertCell(); // 左上空白
+      header.insertCell(); // 左上余白
       for (let i = 0; i < columns; i++) {
         let cell = header.insertCell();
         cell.textContent = "";
       }
-      for (let pIndex = 0; pIndex < pitches.length; pIndex++) {
+      for (let r = 0; r < pitches.length; r++) {
         let row = grid.insertRow();
         let th = row.insertCell();
-        th.textContent = pitches[pIndex];
-        for (let i = 0; i < columns; i++) {
+        th.textContent = pitches[r];
+        for (let c = 0; c < columns; c++) {
           let cell = row.insertCell();
-          cell.addEventListener("click", () => {
-            cell.textContent = cell.textContent ? "" : "○";
-
-            // クリックした瞬間に音を鳴らす
-            if (cell.textContent === "○") {
-              playNote(pitches[pIndex], 0.3);
-            }
-          });
+          cell.onclick = () => toggleCell(r, c, cell);
         }
+      }
+      gridData = Array(pitches.length).fill().map(() => Array(columns).fill(0));
+    }
+
+    function toggleCell(r, c, cell) {
+      if (gridData[r][c] === 0) {
+        gridData[r][c] = 1;
+        cell.style.background = "#4caf50";
+      } else {
+        gridData[r][c] = 0;
+        cell.style.background = "white";
       }
     }
 
-    createGrid();
-
-    function resetGrid() {
-      for (let r = 1; r < grid.rows.length; r++) {
-        for (let c = 1; c < grid.rows[r].cells.length; c++) {
-          grid.rows[r].cells[c].textContent = "";
-        }
-      }
-    }
-
-    function playNote(pitch, duration) {
+    // 音を鳴らす
+    function playNote(freq, duration, volume) {
       let osc = audioCtx.createOscillator();
-      let gain = audioCtx.createGain();
-      osc.frequency.value = noteFreq[pitch];
-      gain.gain.value = document.getElementById("volume").value / 100;
-      osc.connect(gain).connect(audioCtx.destination);
+      let gainNode = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gainNode.gain.value = volume;
+      osc.connect(gainNode).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + duration);
     }
 
-    // 俳句をマス目に配置（5-7-5 の休符を自動挿入）
-    function placeHaiku() {
-      let text = document.getElementById("haiku").value;
-      text = text.replace(/\s/g, ""); // 空白削除
-
-      let chars = [];
-      let counts = [5, 7, 5];
-      let index = 0;
-
-      for (let block = 0; block < counts.length; block++) {
-        for (let i = 0; i < counts[block] && index < text.length; i++) {
-          chars.push(text[index]);
-          index++;
-        }
-        if (block < counts.length - 1) {
-          chars.push(""); // 休符（空列）
-        }
-      }
-
-      createGrid(chars.length);
-      for (let i = 0; i < chars.length; i++) {
-        grid.rows[0].cells[i + 1].textContent = chars[i];
-      }
-    }
-
-    // 再生関連
-    let isPlaying = false;
-    let currentOscillators = [];
-
-    async function playMelody() {
+    function playMelody() {
       if (isPlaying) return;
       isPlaying = true;
-      const tempo = document.getElementById("tempo").value;
+      const bpm = document.getElementById("tempo").value;
       const volume = document.getElementById("volume").value / 100;
-      const beatDuration = 60 / tempo;
+      const beatDuration = 60 / bpm;
 
-      for (let c = 1; c < grid.rows[0].cells.length; c++) {
-        if (!isPlaying) break;
-        for (let r = 1; r < grid.rows.length; r++) {
-          const cell = grid.rows[r].cells[c];
-          if (cell.textContent === "○") {
-            playNote(pitches[r - 1], beatDuration);
+      for (let c = 0; c < gridData[0].length; c++) {
+        for (let r = 0; r < pitches.length; r++) {
+          if (gridData[r][c] === 1) {
+            const freq = noteFreq[pitches[r]];
+            const time = audioCtx.currentTime + c * beatDuration;
+            let osc = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gainNode.gain.value = volume;
+            osc.connect(gainNode).connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + beatDuration);
           }
         }
-        await new Promise(resolve => setTimeout(resolve, beatDuration * 1000));
       }
-      isPlaying = false;
     }
 
     function stopMelody() {
       isPlaying = false;
-      currentOscillators.forEach(o => o.stop());
-      currentOscillators = [];
+      currentTimeouts.forEach(id => clearTimeout(id));
+      currentTimeouts = [];
     }
 
-    // JSON保存（grid + haiku + tempo + volume）
+    function resetGrid() {
+      createGrid(gridData[0].length);
+    }
+
+    // JSON保存
     function saveJSON() {
-      let data = {
-        grid: [],
-        haiku: document.getElementById("haiku").value,
-        tempo: document.getElementById("tempo").value,
-        volume: document.getElementById("volume").value / 100
-      };
-      for (let r = 1; r < grid.rows.length; r++) {
-        let rowData = [];
-        for (let c = 1; c < grid.rows[r].cells.length; c++) {
-          rowData.push(grid.rows[r].cells[c].textContent === "○" ? 1 : 0);
-        }
-        data.grid.push(rowData);
-      }
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+      const data = { grid: gridData };
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "haiku_melody.json";
+      a.href = url;
+      a.download = "haiku.json";
       a.click();
+      URL.revokeObjectURL(url);
     }
 
     // JSON読み込み
-    document.getElementById("fileInput").addEventListener("change", (e) => {
+    document.getElementById("fileInput").addEventListener("change", function (e) {
       const file = e.target.files[0];
-      if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(event) {
+      reader.onload = function (event) {
         const data = JSON.parse(event.target.result);
-
-        // grid復元
-        if (data.grid) {
-          createGrid(data.grid[0].length);
-          for (let r = 0; r < data.grid.length; r++) {
-            for (let c = 0; c < data.grid[r].length; c++) {
-              grid.rows[r+1].cells[c+1].textContent = data.grid[r][c] ? "○" : "";
-            }
-          }
-        }
-
-        // haiku復元
-        if (data.haiku) {
-          document.getElementById("haiku").value = data.haiku;
-        }
-
-        // tempo復元
-        if (data.tempo) {
-          document.getElementById("tempo").value = data.tempo;
-          document.getElementById("tempoValue").textContent = data.tempo;
-        }
-
-        // volume復元
-        if (data.volume !== undefined) {
-          document.getElementById("volume").value = data.volume * 100;
-          document.getElementById("volumeValue").textContent = data.volume * 100;
-        }
+        loadFromJSON(data);
       };
       reader.readAsText(file);
     });
+
+    // ✅ 修正版: JSONから復元
+    function loadFromJSON(data) {
+      if (data.grid) {
+        gridData = data.grid;
+        createGrid(gridData[0].length);
+        for (let r = 0; r < gridData.length; r++) {
+          for (let c = 0; c < gridData[r].length; c++) {
+            if (gridData[r][c] === 1) {
+              grid.rows[r + 1].cells[c + 1].style.background = "#4caf50";
+            } else {
+              grid.rows[r + 1].cells[c + 1].style.background = "white"; // 空白に戻す
+            }
+          }
+        }
+      }
+    }
+
+    // URLからJSONを読み込み
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("data")) {
+        const url = params.get("data");
+        fetch(url)
+          .then(response => response.json())
+          .then(json => loadFromJSON(json))
+          .catch(err => console.error("JSON読み込み失敗:", err));
+      } else {
+        createGrid();
+      }
+    };
   </script>
 </body>
 </html>
